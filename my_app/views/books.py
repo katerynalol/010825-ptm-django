@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination, CursorPagination
 from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -15,9 +15,21 @@ from my_app.models import Book
 from my_app.serializers import BooksSerializer, BookCreateSerializer, BookUpdateSerializer
 
 
+class MyPageNumberPagination(PageNumberPagination):
+    page_size = 10
+
+
+class MyCursorPagination(CursorPagination):
+    page_size = 10
+    ordering = 'id'
+
+
 class BooksListFiltersGenericView(ListAPIView):
     queryset = Book.objects.all()
     serializer_class = BooksSerializer
+    # pagination_class = MyPageNumberPagination
+    # pagination_class = LimitOffsetPagination
+    # pagination_class = MyCursorPagination
 
     # filters
     filter_backends = [

@@ -141,6 +141,86 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+LOGS_DIR = BASE_DIR / 'logs'  # Директория, где будут храниться лог-файлы.
+LOGS_DIR.mkdir(exist_ok=True)  # Создаём папку logs, если её ещё нет, чтобы FileHandler не упал.
+
+
+REST_FRAMEWORK = {
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    # 'PAGE_SIZE': 10,
+
+    'DEFAULT_PAGINATION_CLASS': 'paginators.MyCustomCursorPagination',
+}
+
+
+LOGGING = {  # Главный словарь конфигурации logging для Django.
+    'version': 1,  # Версия формата dictConfig; для Python logging это стандартное обязательное поле.
+    'disable_existing_loggers': False,  # !!!!!! Не отключаем встроенные логгеры Django, чтобы не потерять стандартные логи.
+
+    'formatters': {  # Здесь описываем шаблоны, как будет выглядеть каждая строка лога.
+        'simple': {  # Имя форматтера; потом будем ссылаться на него из handlers.
+            'format': '[{levelname}] | {asctime}  --  {name}:  ({message})',  # Формат строки: уровень, время, имя логгера и сообщение.
+            'style': '{',  # Говорим logging, что шаблон написан в стиле str.format, а не через %.
+        },
+        "verbose": {  # Подробный форматтер.
+            "format": "[{levelname}] {asctime} {name} | module={module} | func={funcName} | line={lineno:d} | pid={process:d} | tid={thread:d} | {message}",
+            # Максимум полезного контекста на строку.
+            "style": "{",
+        },
+        "sql": {  # Отдельный форматтер для SQL.
+            "format": "[{levelname}] {asctime} {name} | duration={duration} | sql={message}",
+            "style": "{",
+        },
+    },
+
+    'handlers': {  # Здесь описываем, куда физически отправлять лог-записи.
+        'console': {  # Handler с именем console для вывода логов в stdout/stderr терминала.
+            'class': 'logging.StreamHandler',  # Стандартный handler Python для вывода в консоль.
+            'formatter': 'simple',  # Говорим handler'у использовать форматтер simple.
+            'level': 'INFO'  # Этот handler будет принимать только INFO и выше.
+        },
+        "app_file": {  # Общий файл приложения.
+            "class": "logging.handlers.RotatingFileHandler",  # Файловый handler с ротацией по размеру.
+            "filename": LOGS_DIR / "app.log",  # Основной лог приложения.
+            "maxBytes": 10 * 1024 * 1024,  # Ротация после 10 МБ.
+            "backupCount": 10,  # Держим 10 архивных файлов.
+            "formatter": "verbose",  # Пишем подробный формат.
+            "level": "DEBUG",  # Сохраняем все уровни начиная с DEBUG.
+            "encoding": "utf-8",  # Корректная кодировка файла.
+        },
+        "db_file": {  # Отдельный файл под SQL-логи.
+            "class": "logging.handlers.RotatingFileHandler",  # Ротация по размеру.
+            "filename": LOGS_DIR / "db.log",  # Файл для SQL-запросов.
+            "maxBytes": 20 * 1024 * 1024,  # SQL часто объёмный, поэтому лимит чуть выше.
+            "backupCount": 5,  # Храним 5 предыдущих файлов SQL.
+            "formatter": "sql",  # Специальный формат для SQL-записей.
+            "level": "DEBUG",  # SQL в Django логируется на DEBUG уровне.
+            "encoding": "utf-8",  # Корректная кодировка.
+        },
+    },
+
+    'loggers': {
+        "django": {  # Общие системные логи Django.
+            "handlers": ["console", "app_file"],  # Обычные события — в app.log, ошибки — ещё и в errors.log.
+            "level": "INFO",  # Для Django держим INFO и выше.
+            "propagate": False,  # Без всплытия, чтобы не получить дубли.
+        },
+        "django.request": {  # Логи, связанные с HTTP-запросами и ошибками обработки запросов.
+            "handlers": ["console", "app_file"],  # Ошибки запросов дублируем в отдельный error-файл.
+            "level": "WARNING",  # 4XX и 5XX здесь особенно интересны, поэтому берём именно WARNING
+            "propagate": False,  # Не пускаем выше.
+        },
+        "django.db.backends": {  # Логгер SQL-запросов Django ORM.
+            "handlers": ["db_file"],  # SQL пишем только в отдельный db.log.
+            "level": "DEBUG" if DEBUG else "INFO",  # В debug-режиме собираем SQL детально, в prod обычно приглушаем.
+            "propagate": False,  # Не смешиваем SQL с общими логами.
+        },
+    },
+}
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
