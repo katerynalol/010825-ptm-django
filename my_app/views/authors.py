@@ -19,7 +19,6 @@ from rest_framework.viewsets import (
 )
 from rest_framework.decorators import action
 
-from debug_tools import QueryDebug
 from my_app.models import Author
 from my_app.permissions import IsStaffAndAdmin
 from my_app.serializers import AuthorDetailSerializer, AuthorListSerializer
@@ -50,10 +49,6 @@ class AuthorsViewSet(ModelViewSet):
         ).lower() == 'true'  # True | False
 
         return context
-
-    @QueryDebug(file_name="queries.log")
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
 
     def get_serializer_class(self):
         if self.action in {'list', 'get_statistic'}:
