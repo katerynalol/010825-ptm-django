@@ -22,3 +22,5 @@ env
 **/terraform.tfstate.backup
 
 **/*.pem
+
+staticfiles/
